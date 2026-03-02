@@ -24,7 +24,7 @@ def move(command: str) -> None:
 def encounter(x: int, y: int) -> None:
     if monsters[x][y]:
         name, hello = monsters[x][y]
-        print(cowsay(hello))
+        print(cowsay(hello, cow=name))
 
 def addmon(x: int, y: int, name: str,  hello: str) -> None:
     global monsters
