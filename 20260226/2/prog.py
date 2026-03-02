@@ -1,5 +1,5 @@
 import sys
-from cowsay import cowsay
+from cowsay import cowsay, list_cows
 
 pos_x, pos_y = 0, 0
 HEIGHT, WIDTH = 10, 10
@@ -23,14 +23,15 @@ def move(command: str) -> None:
 
 def encounter(x: int, y: int) -> None:
     if monsters[x][y]:
-        print(cowsay(monsters[x][y]))
+        name, hello = monsters[x][y]
+        print(cowsay(hello))
 
-def addmon(x: int, y: int, hello: str) -> None:
+def addmon(x: int, y: int, name: str,  hello: str) -> None:
     global monsters
-    print(f"Added monster to ({x}, {y}) saying {hello}")
+    print(f"Added monster {name} to ({x}, {y}) saying {hello}")
     if monsters[x][y]:
         print("Replaced the old monster")
-    monsters[x][y] = hello
+    monsters[x][y] = (name, hello)
 
 if __name__ == "__main__":
     commands = ["up", "down", "left", "right", "addmon"]
@@ -45,16 +46,20 @@ if __name__ == "__main__":
 
             encounter(pos_x, pos_y)
         elif command == commands[4]:
-            if len(args) != 3:
+            if len(args) != 4:
                 print("Invalid arguments")
                 continue
+            name, x_str, y_str, hello = args
             try:
-                x, y = int(args[0]), int(args[1])
+                x, y = int(x_str), int(y_str)
             except ValueError:
                 print("Invalid arguments")
                 continue
+            if name not in list_cows():
+                print("Cannot add unknown monster")
+                continue
             if 0 <= x < WIDTH and 0 <= y < HEIGHT:
-                addmon(x, y, args[2])
+                addmon(x, y, name, hello)
             else:
                 print("Invalid arguments")
         else:
