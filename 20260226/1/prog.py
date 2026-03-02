@@ -7,6 +7,7 @@ monsters = [[None for _ in range(HEIGHT)] for _ in range(WIDTH)]
 def move(command: str):
     global pos_x, pos_y
     global HEIGHT, WIDTH
+    global monsters
     match(command):
         case "up":
             pos_y = (pos_y - 1 + HEIGHT) % HEIGHT
@@ -21,4 +22,8 @@ def move(command: str):
 
     if monsters[pos_x][pos_y]:
         print(cowsay(monsters[pos_x][pos_y]))
+
+def addmon(x: int, y: int, hello: str):
+    global monsters
+    monsters[x][y] = hello
 
