@@ -52,6 +52,8 @@ def addmon(x: int, y: int, name: str,  hello: str) -> None:
     monsters[x][y] = (name, hello)
 
 if __name__ == "__main__":
+    print("<<< Welcome to Python-MUD 0.1 >>>")
+
     commands = ["up", "down", "left", "right", "addmon"]
     while line := sys.stdin.readline().split():
         command, args = line[0], line[1:]
