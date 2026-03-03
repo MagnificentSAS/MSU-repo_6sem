@@ -68,6 +68,8 @@ def parse_addmon(args: list[str]) -> tuple[str ,str, int, int, int]:
         if args[0] == "hp":
             if hp is None:
                 hp = int(args[1])
+                if hp <= 0:
+                    raise ValueError
             else:
                 raise ValueError
             args = args[2:]
@@ -76,6 +78,8 @@ def parse_addmon(args: list[str]) -> tuple[str ,str, int, int, int]:
         if args[0] == "coords":
             if x is None and y is None:
                 x, y = int(args[1]), int(args[2])
+                if not(0 <= x < WIDTH and 0 <= y < HEIGHT):
+                    raise ValueError
             else:
                 raise ValueError
             args = args[3:]
@@ -111,9 +115,6 @@ if __name__ == "__main__":
             if name not in list_cows() and name != "jgsbat":
                 print("Cannot add unknown monster")
                 continue
-            if 0 <= x < WIDTH and 0 <= y < HEIGHT:
-                addmon(x, y, name, hello)
-            else:
-                print("Invalid arguments")
+            addmon(x, y, name, hello)
         else:
             print("Invalid command")
