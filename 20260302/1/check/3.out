@@ -1,0 +1,73 @@
+<<< Welcome to Python-MUD 0.1 >>>
+Moved to (0, 9)
+Moved to (0, 8)
+Moved to (0, 7)
+Moved to (0, 6)
+Moved to (0, 5)
+Moved to (0, 4)
+Moved to (0, 3)
+Moved to (0, 2)
+Moved to (0, 1)
+Added monster hellokitty to (0, 5) saying HELLO
+Added monster hellokitty to (0, 4) saying BYE
+Added monster jgsbat to (0, 4) saying OH SORRY, HELLO
+Replaced the old monster
+Moved to (0, 0)
+Moved to (0, 9)
+Moved to (0, 8)
+Moved to (0, 7)
+Moved to (0, 6)
+Moved to (0, 5)
+ _______ 
+< HELLO >
+ ------- 
+  \
+   \
+      /\_)o<
+     |      \
+     | O . O|
+      \_____/
+Moved to (0, 4)
+ _________________ 
+< OH SORRY, HELLO >
+ ----------------- 
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     __\\'--'//__
+         (((""`  `"")))
+Moved to (0, 3)
+Moved to (0, 2)
+Moved to (0, 1)
+Moved to (0, 0)
+Moved to (0, 9)
+Moved to (0, 8)
+Moved to (0, 7)
+Moved to (0, 6)
+Moved to (0, 5)
+ _______ 
+< HELLO >
+ ------- 
+  \
+   \
+      /\_)o<
+     |      \
+     | O . O|
+      \_____/
+Moved to (0, 4)
+ _________________ 
+< OH SORRY, HELLO >
+ ----------------- 
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     __\\'--'//__
+         (((""`  `"")))

@@ -1,0 +1,8 @@
+bad command
+left arg
+right arg
+addmon pivo coords 2 2 hello haha hp 5
+addmon 2 2
+addmon jgsbat coords 2 e hello haha hp 5
+addmon jgsbat coords 2 2 hello haha hp sa
+stop
