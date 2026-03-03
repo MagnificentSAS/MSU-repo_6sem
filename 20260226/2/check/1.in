@@ -1,6 +1,7 @@
 bad command
 left arg
 right arg
-addmon e 2 haha
+addmon pivo 2 2 haha
 addmon 2 2
+addmon cow 2 e haha
 stop
