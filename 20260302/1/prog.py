@@ -39,18 +39,18 @@ def move(command: str) -> None:
 
 def encounter(x: int, y: int) -> None:
     if monsters[x][y]:
-        name, hello = monsters[x][y]
+        name, hello, hp = monsters[x][y]
         if name != "jgsbat":
             print(cowsay(hello, cow=name))
         else:
             print(cowsay(hello, cowfile=jgsbat))
 
-def addmon(x: int, y: int, name: str,  hello: str) -> None:
+def addmon(x: int, y: int, name: str,  hello: str, hp: int) -> None:
     global monsters
     print(f"Added monster {name} to ({x}, {y}) saying {hello}")
     if monsters[x][y]:
         print("Replaced the old monster")
-    monsters[x][y] = (name, hello)
+    monsters[x][y] = (name, hello, hp)
 
 def parse_addmon(args: list[str]) -> tuple[str ,str, int, int, int]:
     name = args[0]
@@ -115,6 +115,6 @@ if __name__ == "__main__":
             if name not in list_cows() and name != "jgsbat":
                 print("Cannot add unknown monster")
                 continue
-            addmon(x, y, name, hello)
+            addmon(x=x, y=y, name=name, hello=hello, hp=hp)
         else:
             print("Invalid command")
