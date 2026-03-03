@@ -1,6 +1,7 @@
 from io import StringIO
 import sys
 from cowsay import cowsay, list_cows, read_dot_cow
+from shlex import split
 
 pos_x, pos_y = 0, 0
 HEIGHT, WIDTH = 10, 10
@@ -51,12 +52,45 @@ def addmon(x: int, y: int, name: str,  hello: str) -> None:
         print("Replaced the old monster")
     monsters[x][y] = (name, hello)
 
+def parse_addmon(args: list[str]) -> tuple[str ,str, int, int, int]:
+    name = args[0]
+    hello, hp, x, y = None, None, None, None
+    args = args[1:]
+    while args:
+        if args[0] == "hello":
+            if hello is None:
+                hello = args[1]
+            else:
+                raise ValueError
+            args = args[2:]
+            continue
+
+        if args[0] == "hp":
+            if hp is None:
+                hp = int(args[1])
+            else:
+                raise ValueError
+            args = args[2:]
+            continue
+
+        if args[0] == "coords":
+            if x is None and y is None:
+                x, y = int(args[1]), int(args[2])
+            else:
+                raise ValueError
+            args = args[3:]
+            continue
+
+        raise ValueError
+
+    return name, hello, hp, x, y
+
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
 
     commands = ["up", "down", "left", "right", "addmon"]
-    while line := sys.stdin.readline().split():
-        command, args = line[0], line[1:]
+    while line := split(sys.stdin.readline()):
+        command, *args = line
         if command in commands[0:4]:
             if len(args) == 0:
                 move(command)
@@ -66,12 +100,11 @@ if __name__ == "__main__":
 
             encounter(pos_x, pos_y)
         elif command == commands[4]:
-            if len(args) != 4:
+            if len(args) != 8:
                 print("Invalid arguments")
                 continue
-            name, x_str, y_str, hello = args
             try:
-                x, y = int(x_str), int(y_str)
+                name, hello, hp, x, y = parse_addmon(args)
             except ValueError:
                 print("Invalid arguments")
                 continue
