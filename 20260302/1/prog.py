@@ -1,9 +1,24 @@
+from io import StringIO
 import sys
-from cowsay import cowsay, list_cows
+from cowsay import cowsay, list_cows, read_dot_cow
 
 pos_x, pos_y = 0, 0
 HEIGHT, WIDTH = 10, 10
 monsters = [[None for _ in range(HEIGHT)] for _ in range(WIDTH)]
+
+jgsbat_ascii_art = r"""
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     __\\\\'--'//__
+         (((""`  `"")))
+"""
+
+jgsbat = read_dot_cow(StringIO(jgsbat_ascii_art))
 
 def move(command: str) -> None:
     global pos_x, pos_y
@@ -24,7 +39,10 @@ def move(command: str) -> None:
 def encounter(x: int, y: int) -> None:
     if monsters[x][y]:
         name, hello = monsters[x][y]
-        print(cowsay(hello, cow=name))
+        if name != "jgsbat":
+            print(cowsay(hello, cow=name))
+        else:
+            print(cowsay(hello, cowfile=jgsbat))
 
 def addmon(x: int, y: int, name: str,  hello: str) -> None:
     global monsters
@@ -55,7 +73,7 @@ if __name__ == "__main__":
             except ValueError:
                 print("Invalid arguments")
                 continue
-            if name not in list_cows():
+            if name not in list_cows() and name != "jgsbat":
                 print("Cannot add unknown monster")
                 continue
             if 0 <= x < WIDTH and 0 <= y < HEIGHT:
