@@ -12,6 +12,9 @@ class SizeCmdl(cmd.Cmd):
         for name in args:
             print(f"{name} file len: {Path(name).stat().st_size}")
 
+    def complete_size(self, text, line, begidx, endidx):
+        return [str(p) for p in Path("").glob(f"{text}*")]
+
     def do_EOF(self, arg):
         print("BYE")
         return 1
