@@ -22,6 +22,8 @@ class CmdMUD(cmd.Cmd):
     """
     jgsbat = read_dot_cow(StringIO(jgsbat_ascii_art))
 
+    weapons = { "sword": 10, "spear": 15, "axe": 20 }
+
     def __init__(self):
         super().__init__()
         self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
@@ -137,14 +139,27 @@ class CmdMUD(cmd.Cmd):
 
     def do_attack(self, args):
         """Damages monster in room for 10 hp"""
-        if args:
+        args = split(args)
+        if len(args) != 0 and len(args) != 2:
             print("Invalid arguments")
             return
+        elif len(args) == 0:
+            weapon = "sword"
+        else:
+            command, weapon = args
+            if command != "with":
+                print("Invalid arguments")
+                return
+
+        if weapon not in self.weapons:
+            print("Unknown weapon")
+            return
+
         if self.monsters[self.pos_x][self.pos_y] is None:
             print("No monster here")
             return
         name, hello, hp = self.monsters[self.pos_x][self.pos_y]
-        damage = min(hp, 10)
+        damage = min(hp, self.weapons[weapon])
         print(f"Attacked {name}, damage {damage} hp")
         hp -= damage
         if hp == 0:
