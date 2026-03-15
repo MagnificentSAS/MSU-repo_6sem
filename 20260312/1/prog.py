@@ -138,7 +138,11 @@ class CmdMUD(cmd.Cmd):
         return 1
 
     def do_attack(self, args):
-        """Damages monster in room for 10 hp"""
+        """Damages monster in room for some hp:
+        10 - sword
+        15 - spear
+        20 - axe
+        Chose weapon after with"""
         args = split(args)
         if len(args) != 0 and len(args) != 2:
             print("Invalid arguments")
