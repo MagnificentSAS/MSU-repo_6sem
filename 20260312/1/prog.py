@@ -136,14 +136,23 @@ class CmdMUD(cmd.Cmd):
         return 1
 
     def do_attack(self, args):
-        """Damages monster in room for 10 hp"""
-        if args:
+        """Damages named monster in room for 10 hp"""
+        args = split(args)
+        if not args:
             print("Invalid arguments")
             return
-        if self.monsters[self.pos_x][self.pos_y] is None:
-            print("No monster here")
+
+        try:
+            attack_name, = args
+        except:
+            print("Invalid arguments")
+            return
+
+        if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
+            print(f"No {attack_name} here")
             return
         name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+
         damage = min(hp, 10)
         print(f"Attacked {name}, damage {damage} hp")
         hp -= damage
@@ -153,6 +162,11 @@ class CmdMUD(cmd.Cmd):
         else:
             print(f"{name} now has {hp}")
             self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
+
+    def complete_attack(self, text, line, begidx, endidx):
+        line_words = split(line[:begidx])
+        if len(line_words) <= 1:
+            return [cow for cow in list_cows() + ["jgsbat"] if cow.startswith(text)]
 
 
 if __name__ == "__main__":
