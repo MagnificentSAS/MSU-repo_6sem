@@ -173,6 +173,12 @@ class CmdMUD(cmd.Cmd):
             print(f"{name} now has {hp}")
             self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
 
+    def complete_attack(self, text, line, begidx, endidx):
+        line_words = split(line[:begidx])
+        if len(line_words) <= 1:
+            return ["with"] if "with".startswith(text) else []
+        else:
+            return [weapon for weapon in self.weapons if weapon.startswith(text)]
 
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
