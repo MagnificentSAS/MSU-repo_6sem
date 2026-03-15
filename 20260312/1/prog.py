@@ -1,5 +1,4 @@
 import cmd
-import sys
 from cowsay import cowsay, list_cows, read_dot_cow
 from io import StringIO
 from shlex import split
@@ -138,19 +137,20 @@ class CmdMUD(cmd.Cmd):
         return 1
 
     def do_attack(self, args):
-        """Damages monster in room for some hp:
+        """Damages named monster in room for some hp:
         10 - sword
         15 - spear
         20 - axe
         Chose weapon after with"""
         args = split(args)
-        if len(args) != 0 and len(args) != 2:
+        if len(args) != 1 and len(args) != 3:
             print("Invalid arguments")
             return
-        elif len(args) == 0:
+        elif len(args) == 1:
+            attack_name, = args
             weapon = "sword"
         else:
-            command, weapon = args
+            attack_name, command, weapon = args
             if command != "with":
                 print("Invalid arguments")
                 return
@@ -159,11 +159,13 @@ class CmdMUD(cmd.Cmd):
             print("Unknown weapon")
             return
 
-        if self.monsters[self.pos_x][self.pos_y] is None:
-            print("No monster here")
+        if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
+            print(f"No {attack_name} here")
             return
         name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+
         damage = min(hp, self.weapons[weapon])
+
         print(f"Attacked {name}, damage {damage} hp")
         hp -= damage
         if hp == 0:
@@ -176,9 +178,12 @@ class CmdMUD(cmd.Cmd):
     def complete_attack(self, text, line, begidx, endidx):
         line_words = split(line[:begidx])
         if len(line_words) <= 1:
+            return [cow for cow in list_cows() + ["jgsbat"] if cow.startswith(text)]
+        elif len(line_words) == 2:
             return ["with"] if "with".startswith(text) else []
         else:
             return [weapon for weapon in self.weapons if weapon.startswith(text)]
+
 
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
