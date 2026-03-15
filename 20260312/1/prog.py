@@ -114,6 +114,8 @@ class CmdMUD(cmd.Cmd):
         return name, hello, hp, x, y
 
     def do_addmon(self, args):
+        """Adds monster saying hello to coords with hp.
+        Coords, hello message and hp are given after words coords, hello and hp"""
         args = split(args)
         if len(args) != 8:
             print("Invalid arguments")
