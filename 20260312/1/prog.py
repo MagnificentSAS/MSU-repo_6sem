@@ -129,6 +129,10 @@ class CmdMUD(cmd.Cmd):
             return
         self._addmon(x=x, y=y, name=name, hello=hello, hp=hp)
 
+    def do_EOF(self, args):
+        print()
+        return 1
+
 
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
