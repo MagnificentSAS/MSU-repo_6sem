@@ -8,7 +8,6 @@ class CmdMUD(cmd.Cmd):
     prompt = "(mud) "
     pos_x, pos_y = 0, 0
     HEIGHT, WIDTH = 10, 10
-    monsters = [[None for _ in range(HEIGHT)] for _ in range(WIDTH)]
 
     jgsbat_ascii_art = r"""
         ,_                    _,
@@ -21,8 +20,11 @@ class CmdMUD(cmd.Cmd):
       jgs     __\\\\'--'//__
              (((""`  `"")))
     """
-
     jgsbat = read_dot_cow(StringIO(jgsbat_ascii_art))
+
+    def __init__(self):
+        super().__init__()
+        self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
 
     def do_up(self, args):
         """Use to move up"""
@@ -111,32 +113,23 @@ class CmdMUD(cmd.Cmd):
 
         return name, hello, hp, x, y
 
+    def do_addmon(self, args):
+        args = split(args)
+        if len(args) != 8:
+            print("Invalid arguments")
+            return
+        try:
+            name, hello, hp, x, y = self._parse_addmon(args)
+        except ValueError:
+            print("Invalid arguments")
+            return
+
+        if name not in list_cows() and name != "jgsbat":
+            print("Cannot add unknown monster")
+            return
+        self._addmon(x=x, y=y, name=name, hello=hello, hp=hp)
+
+
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
-
-    commands = ["up", "down", "left", "right", "addmon"]
-    while line := split(sys.stdin.readline()):
-        command, *args = line
-        if command in commands[0:4]:
-            if len(args) == 0:
-                move(command)
-            else:
-                print("Invalid arguments")
-                continue
-
-            encounter(pos_x, pos_y)
-        elif command == commands[4]:
-            if len(args) != 8:
-                print("Invalid arguments")
-                continue
-            try:
-                name, hello, hp, x, y = parse_addmon(args)
-            except ValueError:
-                print("Invalid arguments")
-                continue
-            if name not in list_cows() and name != "jgsbat":
-                print("Cannot add unknown monster")
-                continue
-            addmon(x=x, y=y, name=name, hello=hello, hp=hp)
-        else:
-            print("Invalid command")
+    CmdMUD().cmdloop()
