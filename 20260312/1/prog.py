@@ -135,6 +135,25 @@ class CmdMUD(cmd.Cmd):
         print()
         return 1
 
+    def do_attack(self, args):
+        """Damages monster in room for 10 hp"""
+        if args:
+            print("Invalid arguments")
+            return
+        if self.monsters[self.pos_x][self.pos_y] is None:
+            print("No monster here")
+            return
+        name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+        damage = min(hp, 10)
+        print(f"Attacked {name}, damage {damage} hp")
+        hp -= damage
+        if hp == 0:
+            print(f"{name} died")
+            self.monsters[self.pos_x][self.pos_y] = None
+        else:
+            print(f"{name} now has {hp}")
+            self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
+
 
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
