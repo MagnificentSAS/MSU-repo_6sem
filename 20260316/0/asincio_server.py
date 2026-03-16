@@ -6,11 +6,13 @@ async def echo(reader, writer):
         try:
             command, *args = shlex.split(data.decode("utf-8"))
         except:
+            writer.write(b'error')
             continue
         if command == "print":
-            writer.write(data[len(command) + 1:])
+            writer.write(data[len(command) + 1:] + b'\n')
         elif command == "info":
             if len(args) == 0:
+                writer.write(b'error')
                 continue
             if args[0] == "host":
                 writer.write((str(writer.get_extra_info('peername')[0]) + "\n").encode("utf-8"))
