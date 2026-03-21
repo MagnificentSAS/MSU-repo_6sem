@@ -1,12 +1,14 @@
 import argparse
+import asyncio
 import cmd
 import os
+import socket
 import sys
 from cowsay import cowsay, list_cows, read_dot_cow
 from io import StringIO
 from shlex import split
 
-class CmdMUD(cmd.Cmd):
+class serverMUD:
     prompt = "(mud) "
     pos_x, pos_y = 0, 0
     HEIGHT, WIDTH = 10, 10
@@ -26,53 +28,80 @@ class CmdMUD(cmd.Cmd):
 
     weapons = { "sword": 10, "spear": 15, "axe": 20 }
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, writer):
+        self.writer = writer
         self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
+
+    def do_up(self):
+        self.pos_y = (self.pos_y - 1 + self.HEIGHT) % self.HEIGHT
+        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
+
+    def do_down(self):
+        self.pos_y = (self.pos_y + 1) % self.HEIGHT
+        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
+
+    def do_left(self):
+        self.pos_x = (self.pos_x - 1 + self.WIDTH) % self.WIDTH
+        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
+
+    def do_right(self):
+        self.pos_x = (self.pos_x + 1) % self.WIDTH
+        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
+
+    def _encounter(self) -> str:
+        if self.monsters[self.pos_x][self.pos_y]:
+            name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+            if name != "jgsbat":
+                return cowsay(hello, cow=name) + '\n'
+            else:
+                return cowsay(hello, cowfile=self.jgsbat) +'\n'
+
+        return ""
+
+
+class clientMUD(cmd.Cmd):
+    weapons = ["sword", "spear", "axe"]
+
+    def __init__(self, sock, host = None, port = None):
+        super().__init__()
+        self.s = sock
+        host = "localhost" if host is None else host
+        port = 1337 if port is None else port
+        self.s.connect((host, port))
+
 
     def do_up(self, args):
         """Use to move up"""
         if args:
             print("Invalid arguments")
             return
-        self.pos_y = (self.pos_y - 1 + self.HEIGHT) % self.HEIGHT
-        print(f"Moved to ({self.pos_x}, {self.pos_y})")
-        self._encounter()
+        self.s.sendall("up".encode() + b'\n')
+        print(self.s.recv(1024).rstrip().decode())
 
     def do_down(self, args):
         """Use to move down"""
         if args:
             print("Invalid arguments")
             return
-        self.pos_y = (self.pos_y + 1) % self.HEIGHT
-        print(f"Moved to ({self.pos_x}, {self.pos_y})")
-        self._encounter()
+        self.s.sendall("down".encode() + b'\n')
+        print(self.s.recv(1024).rstrip().decode())
 
     def do_left(self, args):
         """Use to move left"""
         if args:
             print("Invalid arguments")
             return
-        self.pos_x = (self.pos_x - 1 + self.WIDTH) % self.WIDTH
-        print(f"Moved to ({self.pos_x}, {self.pos_y})")
-        self._encounter()
+        self.s.sendall("left".encode() + b'\n')
+        print(self.s.recv(1024).rstrip().decode())
 
     def do_right(self, args):
         """Use to move right"""
         if args:
             print("Invalid arguments")
             return
-        self.pos_x = (self.pos_x + 1) % self.WIDTH
-        print(f"Moved to ({self.pos_x}, {self.pos_y})")
-        self._encounter()
+        self.s.sendall("right".encode() + b'\n')
+        print(self.s.recv(1024).rstrip().decode())
 
-    def _encounter(self) -> None:
-        if self.monsters[self.pos_x][self.pos_y]:
-            name, hello, hp = self.monsters[self.pos_x][self.pos_y]
-            if name != "jgsbat":
-                print(cowsay(hello, cow=name))
-            else:
-                print(cowsay(hello, cowfile=self.jgsbat))
 
     def _addmon(self, x: int, y: int, name: str,  hello: str, hp: int) -> None:
         print(f"Added monster {name} to ({x}, {y}) saying {hello}")
@@ -187,11 +216,44 @@ class CmdMUD(cmd.Cmd):
         else:
             return [weapon for weapon in self.weapons if weapon.startswith(text)]
 
-def server():
-    ...
+async def echo(reader, writer):
+    MUD = serverMUD(writer)
 
-def client():
-    ...
+    while data := await reader.readline():
+        command, *args = split(data.decode("utf-8"))
+
+        if command == "left":
+            MUD.do_left()
+        elif command == "right":
+            MUD.do_right()
+        elif command == "down":
+            MUD.do_down()
+        elif command == "up":
+            MUD.do_up()
+        elif command == "info":
+            if len(args) == 0:
+                writer.write(b'error')
+                continue
+            if args[0] == "host":
+                writer.write((str(writer.get_extra_info('peername')[0]) + "\n").encode("utf-8"))
+            elif args[0] == "port":
+                writer.write((str(writer.get_extra_info('peername')[1]) + "\n").encode("utf-8"))
+
+    writer.close()
+    await writer.wait_closed()
+
+async def server_main(port):
+    server = await asyncio.start_server(echo, '0.0.0.0', port)
+    async with server:
+        await server.serve_forever()
+
+def server(port):
+    asyncio.run(server_main(port))
+
+def client(host, port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        clientMUD(s, host, port).cmdloop()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
@@ -200,11 +262,13 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--mode', choices=['client', 'server'],
                         default='client', help="Work mode: client or server. client mode is default.")
 
+    parser.add_argument('--host', type=str, default='localhost', help='Host, default localhost')
+    parser.add_argument('--port', type=int, default=1337, help='Port, default 1337')
+
     args = parser.parse_args()
 
     if args.mode == 'client':
         print("<<< Welcome to Python-MUD 0.1 >>>")
-        CmdMUD().cmdloop()
-        client()
+        client(args.host, args.port)
     else:
-        server()
+        server(args.port)
