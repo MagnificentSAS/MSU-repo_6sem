@@ -15,6 +15,47 @@ class serverMUD:
     pos_x, pos_y = 0, 0
     HEIGHT, WIDTH = SIZE
 
+    weapons = { "sword": 10, "spear": 15, "axe": 20 }
+
+    def __init__(self, writer):
+        self.writer = writer
+        self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
+
+    def do_up(self):
+        self.pos_y = (self.pos_y - 1 + self.HEIGHT) % self.HEIGHT
+        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+
+    def do_down(self):
+        self.pos_y = (self.pos_y + 1) % self.HEIGHT
+        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+
+    def do_left(self):
+        self.pos_x = (self.pos_x - 1 + self.WIDTH) % self.WIDTH
+        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+
+    def do_right(self):
+        self.pos_x = (self.pos_x + 1) % self.WIDTH
+        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+
+    def _encounter(self) -> str:
+        if self.monsters[self.pos_x][self.pos_y]:
+            name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+            return f"{name} '{hello}'"
+
+        return ""
+
+    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int) -> None:
+        if self.monsters[x][y]:
+            res_str = "1"
+        else:
+            res_str = "0"
+        self.writer.write(res_str.encode())
+        self.monsters[x][y] = (name, hello, hp)
+
+
+class clientMUD(cmd.Cmd):
+    HEIGHT, WIDTH = SIZE
+    weapons = ["sword", "spear", "axe"]
     jgsbat_ascii_art = r"""
         ,_                    _,
         ) '-._  ,_    _,  _.-' (
@@ -28,49 +69,6 @@ class serverMUD:
     """
     jgsbat = read_dot_cow(StringIO(jgsbat_ascii_art))
 
-    weapons = { "sword": 10, "spear": 15, "axe": 20 }
-
-    def __init__(self, writer):
-        self.writer = writer
-        self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
-
-    def do_up(self):
-        self.pos_y = (self.pos_y - 1 + self.HEIGHT) % self.HEIGHT
-        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
-
-    def do_down(self):
-        self.pos_y = (self.pos_y + 1) % self.HEIGHT
-        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
-
-    def do_left(self):
-        self.pos_x = (self.pos_x - 1 + self.WIDTH) % self.WIDTH
-        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
-
-    def do_right(self):
-        self.pos_x = (self.pos_x + 1) % self.WIDTH
-        self.writer.write((f"Moved to ({self.pos_x}, {self.pos_y})\n" + self._encounter()).encode())
-
-    def _encounter(self) -> str:
-        if self.monsters[self.pos_x][self.pos_y]:
-            name, hello, hp = self.monsters[self.pos_x][self.pos_y]
-            if name != "jgsbat":
-                return cowsay(hello, cow=name) + '\n'
-            else:
-                return cowsay(hello, cowfile=self.jgsbat) +'\n'
-
-        return ""
-
-    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int) -> None:
-        res_str = f"Added monster {name} to ({x}, {y}) saying {hello}\n"
-        if self.monsters[x][y]:
-            res_str += "Replaced the old monster\n"
-        self.writer.write(res_str.encode())
-        self.monsters[x][y] = (name, hello, hp)
-
-
-class clientMUD(cmd.Cmd):
-    HEIGHT, WIDTH = SIZE
-    weapons = ["sword", "spear", "axe"]
 
     def __init__(self, sock, host = None, port = None):
         super().__init__()
@@ -80,21 +78,32 @@ class clientMUD(cmd.Cmd):
         self.s.connect((host, port))
 
 
+    def _encounter_redner(self, name, hello):
+        if name != "jgsbat":
+            print(cowsay(hello, cow=name))
+        else:
+            print(cowsay(hello, cowfile=self.jgsbat))
+
     def do_up(self, args):
         """Use to move up"""
         if args:
             print("Invalid arguments")
             return
         self.s.sendall("up".encode() + b'\n')
-        print(self.s.recv(1024).rstrip().decode())
-
+        data = split(self.s.recv(1024).rstrip().decode())
+        print(f"Moved to ({int(data[0])}, {int(data[1])})")
+        if len(data) == 4:
+            self._encounter_redner(data[2], data[3])
     def do_down(self, args):
         """Use to move down"""
         if args:
             print("Invalid arguments")
             return
         self.s.sendall("down".encode() + b'\n')
-        print(self.s.recv(1024).rstrip().decode())
+        data = split(self.s.recv(1024).rstrip().decode())
+        print(f"Moved to ({int(data[0])}, {int(data[1])})")
+        if len(data) == 4:
+            self._encounter_redner(data[2], data[3])
 
     def do_left(self, args):
         """Use to move left"""
@@ -102,7 +111,10 @@ class clientMUD(cmd.Cmd):
             print("Invalid arguments")
             return
         self.s.sendall("left".encode() + b'\n')
-        print(self.s.recv(1024).rstrip().decode())
+        data = split(self.s.recv(1024).rstrip().decode())
+        print(f"Moved to ({int(data[0])}, {int(data[1])})")
+        if len(data) == 4:
+            self._encounter_redner(data[2], data[3])
 
     def do_right(self, args):
         """Use to move right"""
@@ -110,7 +122,10 @@ class clientMUD(cmd.Cmd):
             print("Invalid arguments")
             return
         self.s.sendall("right".encode() + b'\n')
-        print(self.s.recv(1024).rstrip().decode())
+        data = split(self.s.recv(1024).rstrip().decode())
+        print(f"Moved to ({int(data[0])}, {int(data[1])})")
+        if len(data) == 4:
+            self._encounter_redner(data[2], data[3])
 
     def _parse_addmon(self, args: list[str]) -> tuple[str ,str, int, int, int]:
         name = args[0]
@@ -166,7 +181,11 @@ class clientMUD(cmd.Cmd):
             print("Cannot add unknown monster")
             return
         self.s.sendall(("addmon "+ f"{x} {y} {name} '{hello}' {hp}\n").encode())
-        print(self.s.recv(1024).rstrip().decode())
+        data = self.s.recv(1024).rstrip().decode()
+        print(f"Added monster {name} to ({x}, {y}) saying {hello}")
+        if data == '1':
+            print("Replaced the old monster")
+
 
 
     def do_EOF(self, args):
