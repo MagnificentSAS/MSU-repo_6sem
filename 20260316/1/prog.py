@@ -8,10 +8,12 @@ from cowsay import cowsay, list_cows, read_dot_cow
 from io import StringIO
 from shlex import split
 
+SIZE = (10, 10)
+
 class serverMUD:
     prompt = "(mud) "
     pos_x, pos_y = 0, 0
-    HEIGHT, WIDTH = 10, 10
+    HEIGHT, WIDTH = SIZE
 
     jgsbat_ascii_art = r"""
         ,_                    _,
@@ -58,8 +60,16 @@ class serverMUD:
 
         return ""
 
+    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int) -> None:
+        res_str = f"Added monster {name} to ({x}, {y}) saying {hello}\n"
+        if self.monsters[x][y]:
+            res_str += "Replaced the old monster\n"
+        self.writer.write(res_str.encode())
+        self.monsters[x][y] = (name, hello, hp)
+
 
 class clientMUD(cmd.Cmd):
+    HEIGHT, WIDTH = SIZE
     weapons = ["sword", "spear", "axe"]
 
     def __init__(self, sock, host = None, port = None):
@@ -101,13 +111,6 @@ class clientMUD(cmd.Cmd):
             return
         self.s.sendall("right".encode() + b'\n')
         print(self.s.recv(1024).rstrip().decode())
-
-
-    def _addmon(self, x: int, y: int, name: str,  hello: str, hp: int) -> None:
-        print(f"Added monster {name} to ({x}, {y}) saying {hello}")
-        if self.monsters[x][y]:
-            print("Replaced the old monster")
-        self.monsters[x][y] = (name, hello, hp)
 
     def _parse_addmon(self, args: list[str]) -> tuple[str ,str, int, int, int]:
         name = args[0]
@@ -162,7 +165,9 @@ class clientMUD(cmd.Cmd):
         if name not in list_cows() and name != "jgsbat":
             print("Cannot add unknown monster")
             return
-        self._addmon(x=x, y=y, name=name, hello=hello, hp=hp)
+        self.s.sendall(("addmon "+ f"{x} {y} {name} '{hello}' {hp}\n").encode())
+        print(self.s.recv(1024).rstrip().decode())
+
 
     def do_EOF(self, args):
         print()
@@ -220,7 +225,7 @@ async def echo(reader, writer):
     MUD = serverMUD(writer)
 
     while data := await reader.readline():
-        command, *args = split(data.decode("utf-8"))
+        command, *args = split(data.decode())
 
         if command == "left":
             MUD.do_left()
@@ -230,14 +235,9 @@ async def echo(reader, writer):
             MUD.do_down()
         elif command == "up":
             MUD.do_up()
-        elif command == "info":
-            if len(args) == 0:
-                writer.write(b'error')
-                continue
-            if args[0] == "host":
-                writer.write((str(writer.get_extra_info('peername')[0]) + "\n").encode("utf-8"))
-            elif args[0] == "port":
-                writer.write((str(writer.get_extra_info('peername')[1]) + "\n").encode("utf-8"))
+        elif command == "addmon":
+            MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
+
 
     writer.close()
     await writer.wait_closed()
