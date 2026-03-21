@@ -52,6 +52,22 @@ class serverMUD:
         self.writer.write(res_str.encode())
         self.monsters[x][y] = (name, hello, hp)
 
+    def attack(self, attack_name, weapon):
+        if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
+            self.writer.write("0".encode())
+            return
+        name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+
+        damage = min(hp, self.weapons[weapon])
+
+        hp -= damage
+        res = f"{name} {damage} {hp}"
+        if hp == 0:
+            self.monsters[self.pos_x][self.pos_y] = None
+        else:
+            self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
+        self.writer.write(res.encode())
+
 
 class clientMUD(cmd.Cmd):
     HEIGHT, WIDTH = SIZE
@@ -186,8 +202,6 @@ class clientMUD(cmd.Cmd):
         if data == '1':
             print("Replaced the old monster")
 
-
-
     def do_EOF(self, args):
         print()
         return 1
@@ -215,21 +229,20 @@ class clientMUD(cmd.Cmd):
             print("Unknown weapon")
             return
 
-        if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
+        self.s.sendall(("attack "+ f"{attack_name} {weapon}\n").encode())
+        data = self.s.recv(1024).rstrip().decode()
+
+        if data == "0":
             print(f"No {attack_name} here")
             return
-        name, hello, hp = self.monsters[self.pos_x][self.pos_y]
 
-        damage = min(hp, self.weapons[weapon])
-
+        name, damage, hp = split(data)
         print(f"Attacked {name}, damage {damage} hp")
-        hp -= damage
-        if hp == 0:
+        if hp == "0":
             print(f"{name} died")
-            self.monsters[self.pos_x][self.pos_y] = None
         else:
             print(f"{name} now has {hp}")
-            self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
+
 
     def complete_attack(self, text, line, begidx, endidx):
         line_words = split(line[:begidx])
@@ -256,7 +269,8 @@ async def echo(reader, writer):
             MUD.do_up()
         elif command == "addmon":
             MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
-
+        elif command == "attack":
+            MUD.attack(args[0], args[1])
 
     writer.close()
     await writer.wait_closed()
