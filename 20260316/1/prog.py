@@ -1,4 +1,7 @@
+import argparse
 import cmd
+import os
+import sys
 from cowsay import cowsay, list_cows, read_dot_cow
 from io import StringIO
 from shlex import split
@@ -184,7 +187,24 @@ class CmdMUD(cmd.Cmd):
         else:
             return [weapon for weapon in self.weapons if weapon.startswith(text)]
 
+def server():
+    ...
+
+def client():
+    ...
 
 if __name__ == "__main__":
-    print("<<< Welcome to Python-MUD 0.1 >>>")
-    CmdMUD().cmdloop()
+    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
+                                     description="Client-server one user MUD")
+
+    parser.add_argument('-m', '--mode', choices=['client', 'server'],
+                        default='client', help="Work mode: client or server. client mode is default.")
+
+    args = parser.parse_args()
+
+    if args.mode == 'client':
+        print("<<< Welcome to Python-MUD 0.1 >>>")
+        CmdMUD().cmdloop()
+        client()
+    else:
+        server()
