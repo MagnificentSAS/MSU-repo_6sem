@@ -50,30 +50,30 @@ class serverMUD:
 
         return ""
 
-    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int, autor: str):
+    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int):
         if self.monsters[x][y]:
             res_str = "1"
         else:
             res_str = "0"
         self.monsters[x][y] = (name, hello, hp)
-        res_str = f"addmoned {name} {hello} {hp} " + res_str
+        res_str = f"addmoned {res_str} {name} {x} {y} '{hello}'"
         return res_str, True
 
-    def attack(self, attack_name, weapon):
-        if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
-            self.writer.write("0".encode())
-            return
-        name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+    def attack(self, attack_name, weapon, autor):
+        q, pos_x, pos_y = self.clients[autor]
+        if self.monsters[pos_x][pos_y] is None or attack_name != self.monsters[pos_x][pos_y][0]:
+            return f"attacked 0 {attack_name}", False
+        name, hello, hp = self.monsters[pos_x][pos_y]
 
         damage = min(hp, self.weapons[weapon])
 
         hp -= damage
-        res = f"attacked {name} {damage} {hp}"
+        res = f"attacked {name} {weapon} {damage} {hp}"
         if hp == 0:
-            self.monsters[self.pos_x][self.pos_y] = None
+            self.monsters[pos_x][pos_y] = None
         else:
-            self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
-        return res.encode(), True
+            self.monsters[pos_x][pos_y] = (name, hello, hp)
+        return res, True
 
 
 class clientMUD(cmd.Cmd):
@@ -118,6 +118,21 @@ class clientMUD(cmd.Cmd):
                     print(f"Moved to ({int(data[0])}, {int(data[1])})")
                     if len(data) == 4:
                         self._encounter_redner(data[2], data[3])
+                elif command == "addmoned":
+                    print(f"{data[5]} added monster {data[1]} to ({data[2]}, {data[3]}) saying {data[4]}")
+                    if data[0] == '1':
+                        print("Replaced the old monster")
+                elif command == "attacked":
+                    if data[0] == "0":
+                        print(f"No {data[1]} here")
+                        return
+
+                    name, weapon, damage, hp, autor = data
+                    print(f"{autor} attacked {name} with {weapon}, damage {damage} hp")
+                    if hp == "0":
+                        print(f"{name} died")
+                    else:
+                        print(f"{name} now has {hp}")
 
 
             except:
@@ -211,10 +226,6 @@ class clientMUD(cmd.Cmd):
             print("Cannot add unknown monster")
             return
         self.s.sendall(("addmon "+ f"{x} {y} {name} '{hello}' {hp}\n").encode())
-        data = split(self.s.recv(1024).rstrip().decode())
-        print(f"{data[0]} added monster {name} to ({x}, {y}) saying {hello}")
-        if data[1] == '1':
-            print("Replaced the old monster")
 
     def do_EOF(self, args):
         self.s.sendall("stop\n".encode())
@@ -245,18 +256,6 @@ class clientMUD(cmd.Cmd):
             return
 
         self.s.sendall(("attack "+ f"{attack_name} {weapon}\n").encode())
-        data = self.s.recv(1024).rstrip().decode()
-
-        if data == "0":
-            print(f"No {attack_name} here")
-            return
-
-        name, damage, hp = split(data)
-        print(f"Attacked {name}, damage {damage} hp")
-        if hp == "0":
-            print(f"{name} died")
-        else:
-            print(f"{name} now has {hp}")
 
 
     def complete_attack(self, text, line, begidx, endidx):
@@ -301,14 +300,14 @@ async def echo(reader, writer):
                     elif command == "addmon":
                         res, fl = MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
                     elif command == "attack":
-                        res, fl = MUD.attack(args[0], args[1])
+                        res, fl = MUD.attack(args[0], args[1], name)
                     elif command == "stop":
                         cont_fl = False
                         break
                     if res:
                         if fl:
                             for out, _, _ in MUD.clients.values():
-                                await out.put(f"'{name}' {res}\n")
+                                await out.put(f"{res} '{name}'")
                         else:
                             writer.write(res.encode())
                             await writer.drain()
