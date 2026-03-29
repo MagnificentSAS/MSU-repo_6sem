@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import cmd
 import os
+import random
 import socket
 import sys
 import threading
@@ -343,7 +344,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      description="Client-server one user MUD")
 
-    parser.add_argument('name', type=str, help="Name of user. Used only for client, but write evety time")
+    parser.add_argument('name', nargs='?', default=f"Guest{random.randint(1, 1000000)}", type=str, help="Name of user. Used only for client, but write evety time")
     parser.add_argument('-m', '--mode', choices=['client', 'server'],
                         default='client', help="Work mode: client or server. client mode is default.")
     parser.add_argument('--host', type=str, default='localhost', help='Host, default localhost')
