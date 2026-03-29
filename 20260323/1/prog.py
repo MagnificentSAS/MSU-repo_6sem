@@ -12,45 +12,53 @@ SIZE = (10, 10)
 
 class serverMUD:
     prompt = "(mud) "
-    pos_x, pos_y = 0, 0
     HEIGHT, WIDTH = SIZE
 
     weapons = { "sword": 10, "spear": 15, "axe": 20 }
 
-    def __init__(self, writer):
-        self.writer = writer
+    def __init__(self):
+        self.clients = {}
         self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
 
-    def do_up(self):
-        self.pos_y = (self.pos_y - 1 + self.HEIGHT) % self.HEIGHT
-        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+    def do_up(self, autor):
+        q, pos_x, pos_y = self.clients[autor]
+        pos_y = (pos_y - 1 + self.HEIGHT) % self.HEIGHT
+        self.clients[autor] = (q, pos_x, pos_y)
+        return (f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
-    def do_down(self):
-        self.pos_y = (self.pos_y + 1) % self.HEIGHT
-        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+    def do_down(self, autor):
+        q, pos_x, pos_y = self.clients[autor]
+        pos_y = (pos_y + 1) % self.HEIGHT
+        self.clients[autor] = (q, pos_x, pos_y)
+        return(f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
-    def do_left(self):
-        self.pos_x = (self.pos_x - 1 + self.WIDTH) % self.WIDTH
-        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+    def do_left(self, autor):
+        q, pos_x, pos_y = self.clients[autor]
+        pos_x = (pos_x - 1 + self.WIDTH) % self.WIDTH
+        self.clients[autor] = (q, pos_x, pos_y)
+        return (f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
-    def do_right(self):
-        self.pos_x = (self.pos_x + 1) % self.WIDTH
-        self.writer.write((f"{self.pos_x} {self.pos_y} " + self._encounter()).encode())
+    def do_right(self, autor):
+        q, pos_x, pos_y = self.clients[autor]
+        pos_x = (pos_x + 1) % self.WIDTH
+        self.clients[autor] = (q, pos_x, pos_y)
+        return (f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
-    def _encounter(self) -> str:
-        if self.monsters[self.pos_x][self.pos_y]:
-            name, hello, hp = self.monsters[self.pos_x][self.pos_y]
+    def _encounter(self, pos_x, pos_y) -> str:
+        if self.monsters[pos_x][pos_y]:
+            name, hello, hp = self.monsters[pos_x][pos_y]
             return f"{name} '{hello}'"
 
         return ""
 
-    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int) -> None:
+    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int, autor: str):
         if self.monsters[x][y]:
             res_str = "1"
         else:
             res_str = "0"
-        self.writer.write(res_str.encode())
         self.monsters[x][y] = (name, hello, hp)
+        res_str += f"'{autor}' {name} {hello} {hp}"
+        return res_str.encode(), True
 
     def attack(self, attack_name, weapon):
         if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
@@ -66,7 +74,7 @@ class serverMUD:
             self.monsters[self.pos_x][self.pos_y] = None
         else:
             self.monsters[self.pos_x][self.pos_y] = (name, hello, hp)
-        self.writer.write(res.encode())
+        return res.encode(), True
 
 
 class clientMUD(cmd.Cmd):
@@ -86,12 +94,18 @@ class clientMUD(cmd.Cmd):
     jgsbat = read_dot_cow(StringIO(jgsbat_ascii_art))
 
 
-    def __init__(self, sock, host = None, port = None):
+    def __init__(self, sock, host=None, port=None, name=None):
         super().__init__()
         self.s = sock
+        self.name = name
         host = "localhost" if host is None else host
         port = 1337 if port is None else port
         self.s.connect((host, port))
+        self.s.sendall(("start_session '" + self.name + "'\n").encode())
+        ans = self.s.recv(1024).rstrip().decode()
+        if ans != "ok":
+            print("Bad name input. Try another.")
+            exit(0)
 
 
     def _encounter_redner(self, name, hello):
@@ -110,6 +124,7 @@ class clientMUD(cmd.Cmd):
         print(f"Moved to ({int(data[0])}, {int(data[1])})")
         if len(data) == 4:
             self._encounter_redner(data[2], data[3])
+
     def do_down(self, args):
         """Use to move down"""
         if args:
@@ -197,12 +212,13 @@ class clientMUD(cmd.Cmd):
             print("Cannot add unknown monster")
             return
         self.s.sendall(("addmon "+ f"{x} {y} {name} '{hello}' {hp}\n").encode())
-        data = self.s.recv(1024).rstrip().decode()
-        print(f"Added monster {name} to ({x}, {y}) saying {hello}")
-        if data == '1':
+        data = split(self.s.recv(1024).rstrip().decode())
+        print(f"{data[0]} added monster {name} to ({x}, {y}) saying {hello}")
+        if data[1] == '1':
             print("Replaced the old monster")
 
     def do_EOF(self, args):
+        self.s.sendall("stop\n".encode())
         print()
         return 1
 
@@ -253,25 +269,61 @@ class clientMUD(cmd.Cmd):
         else:
             return [weapon for weapon in self.weapons if weapon.startswith(text)]
 
+
+MUD = serverMUD()
+
 async def echo(reader, writer):
-    MUD = serverMUD(writer)
+    data = await reader.readline()
+    _, name = split(data.decode())
+    if name in MUD.clients.keys():
+        writer.write("not_ok".encode())
+    else:
+        writer.write("ok".encode())
+        MUD.clients[name] = (asyncio.Queue(), 0, 0)
+        send = asyncio.create_task(reader.readline())
+        receive = asyncio.create_task(MUD.clients[name][0].get())
+        cont_fl = True
+        while cont_fl:
+            done, pending = await asyncio.wait([send, receive], return_when=asyncio.FIRST_COMPLETED)
+            for q in done:
+                if q is send:
+                    send = asyncio.create_task(reader.readline())
+                    command, *args = split(q.result().decode())
 
-    while data := await reader.readline():
-        command, *args = split(data.decode())
+                    res, fl = None, False
+                    if command == "left":
+                        res, fl = MUD.do_left(name)
+                    elif command == "right":
+                        res, fl = MUD.do_right(name)
+                    elif command == "down":
+                        res, fl = MUD.do_down(name)
+                    elif command == "up":
+                        res, fl = MUD.do_up(name)
+                    elif command == "addmon":
+                        res, fl = MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
+                    elif command == "attack":
+                        res, fl = MUD.attack(args[0], args[1])
+                    elif command == "stop":
+                        cont_fl = False
+                        break
+                    if res:
+                        if fl:
+                            for out, _, _ in MUD.clients.values():
+                                await out.put(f"'{name}' {res}\n")
+                        else:
+                            writer.write(res.encode())
+                            await writer.drain()
 
-        if command == "left":
-            MUD.do_left()
-        elif command == "right":
-            MUD.do_right()
-        elif command == "down":
-            MUD.do_down()
-        elif command == "up":
-            MUD.do_up()
-        elif command == "addmon":
-            MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
-        elif command == "attack":
-            MUD.attack(args[0], args[1])
+                elif q is receive:
+                    receive = asyncio.create_task(MUD.clients[name][0].get())
+                    writer.write(f"{q.result()}".encode())
+                    await writer.drain()
 
+        send.cancel()
+        receive.cancel()
+        del MUD.clients[name]
+
+    print(name, "DONE")
     writer.close()
     await writer.wait_closed()
 
@@ -283,25 +335,24 @@ async def server_main(port):
 def server(port):
     asyncio.run(server_main(port))
 
-def client(host, port):
+def client(host, port, name):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        clientMUD(s, host, port).cmdloop()
+        clientMUD(s, host, port, name).cmdloop()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      description="Client-server one user MUD")
 
+    parser.add_argument('name', type=str, help="Name of user. Used only for client, but write evety time")
     parser.add_argument('-m', '--mode', choices=['client', 'server'],
                         default='client', help="Work mode: client or server. client mode is default.")
-
     parser.add_argument('--host', type=str, default='localhost', help='Host, default localhost')
     parser.add_argument('--port', type=int, default=1337, help='Port, default 1337')
-
     args = parser.parse_args()
 
     if args.mode == 'client':
         print("<<< Welcome to Python-MUD 0.1 >>>")
-        client(args.host, args.port)
+        client(args.host, args.port, args.name)
     else:
         server(args.port)
