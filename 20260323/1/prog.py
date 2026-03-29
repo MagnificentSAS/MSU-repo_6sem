@@ -4,6 +4,7 @@ import cmd
 import os
 import socket
 import sys
+import threading
 from cowsay import cowsay, list_cows, read_dot_cow
 from io import StringIO
 from shlex import split
@@ -11,9 +12,7 @@ from shlex import split
 SIZE = (10, 10)
 
 class serverMUD:
-    prompt = "(mud) "
     HEIGHT, WIDTH = SIZE
-
     weapons = { "sword": 10, "spear": 15, "axe": 20 }
 
     def __init__(self):
@@ -24,25 +23,25 @@ class serverMUD:
         q, pos_x, pos_y = self.clients[autor]
         pos_y = (pos_y - 1 + self.HEIGHT) % self.HEIGHT
         self.clients[autor] = (q, pos_x, pos_y)
-        return (f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
+        return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_down(self, autor):
         q, pos_x, pos_y = self.clients[autor]
         pos_y = (pos_y + 1) % self.HEIGHT
         self.clients[autor] = (q, pos_x, pos_y)
-        return(f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
+        return(f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_left(self, autor):
         q, pos_x, pos_y = self.clients[autor]
         pos_x = (pos_x - 1 + self.WIDTH) % self.WIDTH
         self.clients[autor] = (q, pos_x, pos_y)
-        return (f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
+        return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_right(self, autor):
         q, pos_x, pos_y = self.clients[autor]
         pos_x = (pos_x + 1) % self.WIDTH
         self.clients[autor] = (q, pos_x, pos_y)
-        return (f"{pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
+        return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def _encounter(self, pos_x, pos_y) -> str:
         if self.monsters[pos_x][pos_y]:
@@ -57,8 +56,8 @@ class serverMUD:
         else:
             res_str = "0"
         self.monsters[x][y] = (name, hello, hp)
-        res_str += f"'{autor}' {name} {hello} {hp}"
-        return res_str.encode(), True
+        res_str = f"addmoned {name} {hello} {hp} " + res_str
+        return res_str, True
 
     def attack(self, attack_name, weapon):
         if self.monsters[self.pos_x][self.pos_y] is None or attack_name != self.monsters[self.pos_x][self.pos_y][0]:
@@ -69,7 +68,7 @@ class serverMUD:
         damage = min(hp, self.weapons[weapon])
 
         hp -= damage
-        res = f"{name} {damage} {hp}"
+        res = f"attacked {name} {damage} {hp}"
         if hp == 0:
             self.monsters[self.pos_x][self.pos_y] = None
         else:
@@ -92,7 +91,7 @@ class clientMUD(cmd.Cmd):
              (((""`  `"")))
     """
     jgsbat = read_dot_cow(StringIO(jgsbat_ascii_art))
-
+    prompt = ""
 
     def __init__(self, sock, host=None, port=None, name=None):
         super().__init__()
@@ -107,6 +106,22 @@ class clientMUD(cmd.Cmd):
             print("Bad name input. Try another.")
             exit(0)
 
+        self.receive_thread = threading.Thread(target=self.receive_messages, daemon=True)
+        self.receive_thread.start()
+
+    def receive_messages(self):
+        """Поток для асинхронного приема сообщений от сервера"""
+        while True:
+            try:
+                command, *data = split(self.s.recv(1024).rstrip().decode())
+                if command == "moved":
+                    print(f"Moved to ({int(data[0])}, {int(data[1])})")
+                    if len(data) == 4:
+                        self._encounter_redner(data[2], data[3])
+
+
+            except:
+                break
 
     def _encounter_redner(self, name, hello):
         if name != "jgsbat":
@@ -120,10 +135,6 @@ class clientMUD(cmd.Cmd):
             print("Invalid arguments")
             return
         self.s.sendall("up".encode() + b'\n')
-        data = split(self.s.recv(1024).rstrip().decode())
-        print(f"Moved to ({int(data[0])}, {int(data[1])})")
-        if len(data) == 4:
-            self._encounter_redner(data[2], data[3])
 
     def do_down(self, args):
         """Use to move down"""
@@ -131,10 +142,6 @@ class clientMUD(cmd.Cmd):
             print("Invalid arguments")
             return
         self.s.sendall("down".encode() + b'\n')
-        data = split(self.s.recv(1024).rstrip().decode())
-        print(f"Moved to ({int(data[0])}, {int(data[1])})")
-        if len(data) == 4:
-            self._encounter_redner(data[2], data[3])
 
     def do_left(self, args):
         """Use to move left"""
@@ -142,10 +149,6 @@ class clientMUD(cmd.Cmd):
             print("Invalid arguments")
             return
         self.s.sendall("left".encode() + b'\n')
-        data = split(self.s.recv(1024).rstrip().decode())
-        print(f"Moved to ({int(data[0])}, {int(data[1])})")
-        if len(data) == 4:
-            self._encounter_redner(data[2], data[3])
 
     def do_right(self, args):
         """Use to move right"""
@@ -153,10 +156,6 @@ class clientMUD(cmd.Cmd):
             print("Invalid arguments")
             return
         self.s.sendall("right".encode() + b'\n')
-        data = split(self.s.recv(1024).rstrip().decode())
-        print(f"Moved to ({int(data[0])}, {int(data[1])})")
-        if len(data) == 4:
-            self._encounter_redner(data[2], data[3])
 
     def _parse_addmon(self, args: list[str]) -> tuple[str ,str, int, int, int]:
         name = args[0]
@@ -324,6 +323,7 @@ async def echo(reader, writer):
         del MUD.clients[name]
 
     print(name, "DONE")
+    writer.write(b"")
     writer.close()
     await writer.wait_closed()
 
