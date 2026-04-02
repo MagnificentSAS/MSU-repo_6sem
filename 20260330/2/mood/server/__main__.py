@@ -5,9 +5,10 @@ import sys
 from shlex import split
 from mood.common import SIZE
 
+
 class serverMUD:
     HEIGHT, WIDTH = SIZE
-    weapons = { "sword": 10, "spear": 15, "axe": 20 }
+    weapons = {"sword": 10, "spear": 15, "axe": 20}
 
     def __init__(self):
         self.clients = {}
@@ -23,7 +24,7 @@ class serverMUD:
         q, pos_x, pos_y = self.clients[autor]
         pos_y = (pos_y + 1) % self.HEIGHT
         self.clients[autor] = (q, pos_x, pos_y)
-        return(f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
+        return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_left(self, autor):
         q, pos_x, pos_y = self.clients[autor]
@@ -44,7 +45,7 @@ class serverMUD:
 
         return ""
 
-    def addmon(self, x: int, y: int, name: str,  hello: str, hp: int):
+    def addmon(self, x: int, y: int, name: str, hello: str, hp: int):
         if self.monsters[x][y]:
             res_str = "1"
         else:
@@ -69,7 +70,9 @@ class serverMUD:
             self.monsters[pos_x][pos_y] = (name, hello, hp)
         return res, True
 
+
 MUD = serverMUD()
+
 
 async def echo(reader, writer):
     data = await reader.readline()
@@ -132,6 +135,7 @@ async def echo(reader, writer):
     writer.write(b"")
     writer.close()
     await writer.wait_closed()
+
 
 async def server_main(port):
     server = await asyncio.start_server(echo, '0.0.0.0', port)

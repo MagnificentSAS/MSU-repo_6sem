@@ -10,6 +10,7 @@ from io import StringIO
 from shlex import split
 from mood.common import SIZE
 
+
 class clientMUD(cmd.Cmd):
     HEIGHT, WIDTH = SIZE
     weapons = ["sword", "spear", "axe"]
@@ -111,7 +112,7 @@ class clientMUD(cmd.Cmd):
             return
         self.s.sendall("right".encode() + b'\n')
 
-    def _parse_addmon(self, args: list[str]) -> tuple[str ,str, int, int, int]:
+    def _parse_addmon(self, args: list[str]) -> tuple[str, str, int, int, int]:
         name = args[0]
         hello, hp, x, y = None, None, None, None
         args = args[1:]
@@ -137,7 +138,7 @@ class clientMUD(cmd.Cmd):
             if args[0] == "coords":
                 if x is None and y is None:
                     x, y = int(args[1]), int(args[2])
-                    if not(0 <= x < self.WIDTH and 0 <= y < self.HEIGHT):
+                    if not (0 <= x < self.WIDTH and 0 <= y < self.HEIGHT):
                         raise ValueError
                 else:
                     raise ValueError
@@ -164,7 +165,7 @@ class clientMUD(cmd.Cmd):
         if name not in list_cows() and name != "jgsbat":
             print("Cannot add unknown monster")
             return
-        self.s.sendall(("addmon "+ f"{x} {y} {name} '{hello}' {hp}\n").encode())
+        self.s.sendall(("addmon " + f"{x} {y} {name} '{hello}' {hp}\n").encode())
 
     def do_EOF(self, args):
         self.s.sendall("stop\n".encode())
@@ -194,7 +195,7 @@ class clientMUD(cmd.Cmd):
             print("Unknown weapon")
             return
 
-        self.s.sendall(("attack "+ f"{attack_name} {weapon}\n").encode())
+        self.s.sendall(("attack " + f"{attack_name} {weapon}\n").encode())
 
     def do_sayall(self, arg):
         """Say something to everyone!
@@ -210,7 +211,7 @@ class clientMUD(cmd.Cmd):
             print("Too many arguments")
             return
 
-        self.s.sendall(("sayall "+ f"'{args[0]}'\n").encode())
+        self.s.sendall(("sayall " + f"'{args[0]}'\n").encode())
 
     def complete_attack(self, text, line, begidx, endidx):
         line_words = split(line[:begidx])
@@ -225,7 +226,8 @@ class clientMUD(cmd.Cmd):
 parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                  description="Client for MUD")
 
-parser.add_argument('name', nargs='?', default=f"Guest{random.randint(1, 1000000)}", type=str, help="Name of user. Used only for client, but write evety time")
+parser.add_argument('name', nargs='?', default=f"Guest{random.randint(1, 1000000)}", type=str,
+                    help="Name of user. Used only for client, but write evety time")
 parser.add_argument('--host', type=str, default='localhost', help='Host, default localhost')
 parser.add_argument('--port', type=int, default=1337, help='Port, default 1337')
 args = parser.parse_args()
