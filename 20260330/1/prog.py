@@ -123,6 +123,10 @@ class clientMUD(cmd.Cmd):
                     print(f"{data[5]} added monster {data[1]} to ({data[2]}, {data[3]}) saying {data[4]}")
                     if data[0] == '1':
                         print("Replaced the old monster")
+                elif command == "started":
+                    print(f"{data[-1]} entered dungeon")
+                elif command == "stopped":
+                    print(f"{data[-1]} run out of dungeon")
                 elif command == "attacked":
                     if data[0] == "0":
                         print(f"No {data[1]} here")
@@ -294,6 +298,9 @@ async def echo(reader, writer):
         writer.write("not_ok".encode())
     else:
         writer.write("ok".encode())
+        for out, _, _ in MUD.clients.values():
+            await out.put(f"started '{name}'")
+
         MUD.clients[name] = (asyncio.Queue(), 0, 0)
         send = asyncio.create_task(reader.readline())
         receive = asyncio.create_task(MUD.clients[name][0].get())
@@ -322,7 +329,7 @@ async def echo(reader, writer):
                         res, other_fl, user_fl = "sayed " + f"'{args[0]}'", True, False
                     elif command == "stop":
                         cont_fl = False
-                        break
+                        res, other_fl, user_fl = "stopped", True, False
                     if res:
                         if other_fl:
                             for out, _, _ in MUD.clients.values():
