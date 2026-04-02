@@ -1,3 +1,4 @@
+"""Client implementation for MUD."""
 import argparse
 import cmd
 import os
@@ -12,6 +13,8 @@ from mood.common import SIZE
 
 
 class clientMUD(cmd.Cmd):
+    """Client class based on cmd.Cmd."""
+
     HEIGHT, WIDTH = SIZE
     weapons = ["sword", "spear", "axe"]
     jgsbat_ascii_art = r"""
@@ -29,6 +32,13 @@ class clientMUD(cmd.Cmd):
     prompt = ""
 
     def __init__(self, sock, host=None, port=None, name=None):
+        """Initialize client.
+
+        :param sock: - socket to work with
+        :param host: - host for connection
+        :param port: - port for connection
+        :param name: - name of user
+        """
         super().__init__()
         self.s = sock
         self.name = name
@@ -45,7 +55,7 @@ class clientMUD(cmd.Cmd):
         self.receive_thread.start()
 
     def receive_messages(self):
-        """Поток для асинхронного приема сообщений от сервера"""
+        """Thread for asynchronously receiving messages from the server."""
         while True:
             try:
                 command, *data = split(self.s.recv(1024).rstrip().decode())
@@ -85,28 +95,28 @@ class clientMUD(cmd.Cmd):
             print(cowsay(hello, cowfile=self.jgsbat))
 
     def do_up(self, args):
-        """Use to move up"""
+        """Use to move up."""
         if args:
             print("Invalid arguments")
             return
         self.s.sendall("up".encode() + b'\n')
 
     def do_down(self, args):
-        """Use to move down"""
+        """Use to move down."""
         if args:
             print("Invalid arguments")
             return
         self.s.sendall("down".encode() + b'\n')
 
     def do_left(self, args):
-        """Use to move left"""
+        """Use to move left."""
         if args:
             print("Invalid arguments")
             return
         self.s.sendall("left".encode() + b'\n')
 
     def do_right(self, args):
-        """Use to move right"""
+        """Use to move right."""
         if args:
             print("Invalid arguments")
             return
@@ -150,8 +160,10 @@ class clientMUD(cmd.Cmd):
         return name, hello, hp, x, y
 
     def do_addmon(self, args):
-        """Adds monster saying hello to coords with hp.
-        Coords, hello message and hp are given after words coords, hello and hp"""
+        """Add monster saying hello to coords with hp.
+
+        Coordinates, hello message and hp are given after words coords, hello and hp.
+        """
         args = split(args)
         if len(args) != 8:
             print("Invalid arguments")
@@ -168,16 +180,19 @@ class clientMUD(cmd.Cmd):
         self.s.sendall(("addmon " + f"{x} {y} {name} '{hello}' {hp}\n").encode())
 
     def do_EOF(self, args):
+        """End work of client."""
         self.s.sendall("stop\n".encode())
         print()
         return 1
 
     def do_attack(self, args):
-        """Damages named monster in room for some hp:
+        """Damages named monster in room for some hp.
+
         10 - sword
         15 - spear
         20 - axe
-        Chose weapon after with"""
+        Chose weapon after with.
+        """
         args = split(args)
         if len(args) != 1 and len(args) != 3:
             print("Invalid arguments")
@@ -198,7 +213,7 @@ class clientMUD(cmd.Cmd):
         self.s.sendall(("attack " + f"{attack_name} {weapon}\n").encode())
 
     def do_sayall(self, arg):
-        """Say something to everyone!
+        """Say something to everyone.
 
         Use one word or one string in ""
         """
@@ -214,6 +229,7 @@ class clientMUD(cmd.Cmd):
         self.s.sendall(("sayall " + f"'{args[0]}'\n").encode())
 
     def complete_attack(self, text, line, begidx, endidx):
+        """Help to complete attack command."""
         line_words = split(line[:begidx])
         if len(line_words) <= 1:
             return [cow for cow in list_cows() + ["jgsbat"] if cow.startswith(text)]

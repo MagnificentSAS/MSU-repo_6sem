@@ -1,3 +1,4 @@
+"""Server implementation for MUD."""
 import argparse
 import asyncio
 import os
@@ -7,32 +8,39 @@ from mood.common import SIZE
 
 
 class serverMUD:
+    """Server class for easier work."""
+
     HEIGHT, WIDTH = SIZE
     weapons = {"sword": 10, "spear": 15, "axe": 20}
 
     def __init__(self):
+        """Initialize clients and monsters."""
         self.clients = {}
         self.monsters = [[None for _ in range(self.HEIGHT)] for _ in range(self.WIDTH)]
 
     def do_up(self, autor):
+        """Move autor up."""
         q, pos_x, pos_y = self.clients[autor]
         pos_y = (pos_y - 1 + self.HEIGHT) % self.HEIGHT
         self.clients[autor] = (q, pos_x, pos_y)
         return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_down(self, autor):
+        """Move autor down."""
         q, pos_x, pos_y = self.clients[autor]
         pos_y = (pos_y + 1) % self.HEIGHT
         self.clients[autor] = (q, pos_x, pos_y)
         return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_left(self, autor):
+        """Move autor left."""
         q, pos_x, pos_y = self.clients[autor]
         pos_x = (pos_x - 1 + self.WIDTH) % self.WIDTH
         self.clients[autor] = (q, pos_x, pos_y)
         return (f"moved {pos_x} {pos_y} " + self._encounter(pos_x, pos_y)), False
 
     def do_right(self, autor):
+        """Move autor right."""
         q, pos_x, pos_y = self.clients[autor]
         pos_x = (pos_x + 1) % self.WIDTH
         self.clients[autor] = (q, pos_x, pos_y)
@@ -46,6 +54,15 @@ class serverMUD:
         return ""
 
     def addmon(self, x: int, y: int, name: str, hello: str, hp: int):
+        """Add monster.
+
+        :param x: x coordinate of monster
+        :param y: y coordinate of monster
+        :param name: name of monster
+        :param hello: message for encounter with monster
+        :param hp: monster hp
+        :return: message for client
+        """
         if self.monsters[x][y]:
             res_str = "1"
         else:
@@ -55,6 +72,13 @@ class serverMUD:
         return res_str, True
 
     def attack(self, attack_name, weapon, autor):
+        """Attack monster by autor.
+
+        :param attack_name: name of attacked monster
+        :param weapon: used weapon
+        :param autor: autor of attack
+        :return: message for client
+        """
         q, pos_x, pos_y = self.clients[autor]
         if self.monsters[pos_x][pos_y] is None or attack_name != self.monsters[pos_x][pos_y][0]:
             return f"attacked 0 {attack_name}", False
@@ -75,6 +99,7 @@ MUD = serverMUD()
 
 
 async def echo(reader, writer):
+    """Process messages from different clients."""
     data = await reader.readline()
     _, name = split(data.decode())
     if name in MUD.clients.keys():
@@ -138,6 +163,7 @@ async def echo(reader, writer):
 
 
 async def server_main(port):
+    """Launch server."""
     server = await asyncio.start_server(echo, '0.0.0.0', port)
     async with server:
         await server.serve_forever()
