@@ -134,7 +134,8 @@ class clientMUD(cmd.Cmd):
                         print(f"{name} died")
                     else:
                         print(f"{name} now has {hp}")
-
+                elif command == "sayed":
+                    print(f"{data[-1]}: {data[0]}")
 
             except:
                 break
@@ -258,6 +259,21 @@ class clientMUD(cmd.Cmd):
 
         self.s.sendall(("attack "+ f"{attack_name} {weapon}\n").encode())
 
+    def do_sayall(self, arg):
+        """Say something to everyone!
+
+        Use one word or one string in ""
+        """
+        args = split(arg)
+        if len(args) == 0:
+            print("You said nothing")
+            return
+
+        if len(args) > 1:
+            print("Too many arguments")
+            return
+
+        self.s.sendall(("sayall "+ f"'{args[0]}'\n").encode())
 
     def complete_attack(self, text, line, begidx, endidx):
         line_words = split(line[:begidx])
@@ -289,26 +305,29 @@ async def echo(reader, writer):
                     send = asyncio.create_task(reader.readline())
                     command, *args = split(q.result().decode())
 
-                    res, fl = None, False
+                    res, other_fl, user_fl = None, False, True
                     if command == "left":
-                        res, fl = MUD.do_left(name)
+                        res, other_fl = MUD.do_left(name)
                     elif command == "right":
-                        res, fl = MUD.do_right(name)
+                        res, other_fl = MUD.do_right(name)
                     elif command == "down":
-                        res, fl = MUD.do_down(name)
+                        res, other_fl = MUD.do_down(name)
                     elif command == "up":
-                        res, fl = MUD.do_up(name)
+                        res, other_fl = MUD.do_up(name)
                     elif command == "addmon":
-                        res, fl = MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
+                        res, other_fl = MUD.addmon(int(args[0]), int(args[1]), args[2], args[3], int(args[4]))
                     elif command == "attack":
-                        res, fl = MUD.attack(args[0], args[1], name)
+                        res, other_fl = MUD.attack(args[0], args[1], name)
+                    elif command == "sayall":
+                        res, other_fl, user_fl = "sayed " + f"'{args[0]}'", True, False
                     elif command == "stop":
                         cont_fl = False
                         break
                     if res:
-                        if fl:
+                        if other_fl:
                             for out, _, _ in MUD.clients.values():
-                                await out.put(f"{res} '{name}'")
+                                if user_fl or out is not MUD.clients[name][0]:
+                                    await out.put(f"{res} '{name}'")
                         else:
                             writer.write(res.encode())
                             await writer.drain()
